@@ -1,0 +1,12 @@
+[package]
+name = "translate"
+version = "0.1.0"
+authors = ["nbrown30 <2702993+nbrown30@users.noreply.github.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+hyper = "*"
+docopt = "^1.0"
+serde = "^1.0"
