@@ -32,17 +32,17 @@ USAGE:
   ./translate -h | --help
 
 OPTIONS:
-phrase
-  what you want to translate
+  phrase
+    what you want to translate
 
-destination-language
-  the language you are translating to
+  destination-language
+    the language you are translating to
 
-api-key
-  your Google Translate API key (go to console.cloud.google.com to generate one)
+  api-key
+    your Google Translate API key (go to console.cloud.google.com to generate one)
 
--h --help
-  displays this information
+  -h --help
+    displays this information
 
 EXAMPLE:
   ./translate "Hello World" Spanish abc
@@ -60,39 +60,6 @@ struct Args {
 }
 
 fn main() {
-	let xml_file = read_file_to_string().expect("Unable to open file");
-	let mut content_tree = Element::parse(xml_file.as_bytes()).unwrap();
-
-	println!("{:#?}", content_tree);
-	{
-		let mut component = content_tree.get_mut_child("component").expect("Unable to find component element");
-		let mut field = component.get_mut_child("field").expect("Unable to find field element");
-		let mut property = field.get_mut_child("property").expect("Unable to find property element");
-		println!("The inner text is {}",
-			match property.text {
-				None => "No inner text",
-				Some(ref inner_text) => inner_text,
-			}
-		);
-    	property.text = Some("<![CDATA[<p>This is our translated content.</p>]]>".to_string());
-	}
-
-	let xml_config = EmitterConfig {
-		perform_escaping: false,
-		perform_indent: true,
-		..EmitterConfig::default()
-	};
-
-	/// FOR DEBUGGING
-	// let mut buf = Vec::new();
-	// content_tree.write_with_config(&mut buf, xml_config).unwrap();
-
-	// let s = String::from_utf8(buf).unwrap();
- 	// println!("{}", s);
-	content_tree.write_with_config(File::create("translated.xml").unwrap(), xml_config);
-
-	return ();
-
 	let args: Args = Docopt::new(USAGE)
 		.and_then(|d| d.deserialize())
 		.unwrap_or_else(|e| e.exit());
@@ -100,6 +67,37 @@ fn main() {
 	let phrase = args.arg_phrase;
 	let destination_language = args.arg_destination_language;
 	let api_key = args.arg_api_key;
+
+	let xml_file = read_file_to_string().expect("Unable to open file");
+	let mut content_tree = Element::parse(xml_file.as_bytes()).unwrap();
+	println!("Running");
+
+	let iso_destination_language : String = googletranslate2::get_iso_language_code(destination_language.as_str());
+
+	for (_i, element) in content_tree.children.iter_mut().enumerate() {
+
+		let mut field = match element.get_mut_child("field") {
+			Some(x) => x,
+			None => continue,
+		};
+
+		set_language_attribute(field, &iso_destination_language);
+
+		let mut property = match field.get_mut_child("property") {
+			Some(x) => x,
+			None => continue,
+		};
+
+		if property.text.is_some() {
+			property.text = Some("<![CDATA[<p>This is our translated content.</p>]]>".to_string());
+		} else {
+			property.text = Some("<![CDATA[]]>".to_string())
+		}
+	}
+
+	write_xml_to_file(content_tree, "translated.xml");
+
+	return ();
 
 	// println!("{}", format!("Supplied {p} and {l} and {key}", p = phrase, l = destination_language, key = api_key));
 	// let response_body = translate(&phrase, "english", &destination_language, &api_key);
@@ -143,8 +141,30 @@ Oh, I always feared he might run off like this. Why, why, why didn't I break his
 	}
 }
 
+fn set_language_attribute(elem: &mut Element, iso_lang: &String) {
+	if elem.attributes.contains_key("language") {
+		elem.attributes.insert("language".to_owned(), iso_lang.to_string());
+		assert_eq!(elem.attributes[&"language".to_string()], iso_lang.clone());
+	}
+}
+
+fn write_xml_to_file(content_tree: Element, output_path: &str) {
+	let xml_config = EmitterConfig {
+		perform_escaping: false,
+		perform_indent: true,
+		..EmitterConfig::default()
+	};
+
+	// let mut buf = Vec::new();
+	// content_tree.write_with_config(&mut buf, xml_config).unwrap();
+
+	// let s = String::from_utf8(buf).unwrap();
+ 	// println!("{}", s);
+	content_tree.write_with_config(File::create(output_path).unwrap(), xml_config);
+}
+
 fn read_file_to_string() -> Result<String, Box<dyn std::error::Error + 'static>>  {
-	let foo = fs::read_to_string("example.xml")?.parse()?;
+	let foo = fs::read_to_string("en.xml")?.parse()?;
     Ok(foo)
 }
 
@@ -188,12 +208,14 @@ fn get_request_url_for_multiple_translations(to_translate: &Vec<String>, source_
 	let mut url = GOOGLE_TRANSLATE_URL.to_owned();
 	url.push_str("?");
 	url.push_str(&format!("&key={}", api_key));
-	for (i, phrase) in to_translate.iter().enumerate() {
-		url.push_str(&format!("&q={}", phrase.as_str()));
-	}
 	url.push_str(&format!("&target={}", googletranslate2::get_iso_language_code(destination_language)));
 	url.push_str(&format!("&source={}", googletranslate2::get_iso_language_code(source_language)));
 
+	for (_i, phrase) in to_translate.iter().enumerate() {
+		url.push_str(&format!("&q={}", phrase.as_str()));
+	}
+
 	println!("{}", url);
+
 	return url;
 }

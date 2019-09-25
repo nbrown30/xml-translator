@@ -7,4 +7,16 @@
 		</field>
 	</component>
 
+	<component context="Rich Content Editor (Aura)" id="89445f2d-70d2-4cf-a496-bb07bd1b2c94">
+		<field name="AuraAttributes" language="en_US" exportcrc="1287625607">
+			<property name="richTextValue"><![CDATA[<p>This is our English content.</p>]]></property>
+		</field>
+	</component>
+
+	<component context="Rich Content Editor (Aura)" id="89445f2d-70d2-4cf-a496-bb07bd1b2c94">
+		<field name="AuraAttributes" language="en_US" exportcrc="1287625607">
+			<property name="richTextValue"><![CDATA[<p>This is our English content.</p>]]></property>
+		</field>
+	</component>
+
 </languagedata>
